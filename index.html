@@ -115,6 +115,21 @@
                     </div>
                 </div>
 
+                <div class="control-section">
+                    <h3>Parallax Effect</h3>
+                    <div class="parallax-controls">
+                        <label class="toggle-label">
+                            <input type="checkbox" id="parallax-toggle">
+                            <span class="toggle-text">Enable Parallax on Scroll</span>
+                        </label>
+                        <div class="slider-group">
+                            <label for="parallax-intensity">Intensity: <span id="parallax-intensity-value">50</span>%</label>
+                            <input type="range" id="parallax-intensity" min="0" max="100" value="50">
+                        </div>
+                        <p class="parallax-info">Scroll the page to see the effect!</p>
+                    </div>
+                </div>
+
                 <div class="info-section">
                     <p><strong>Instructions:</strong></p>
                     <ul>
@@ -123,10 +138,32 @@
                         <li>Customize rules for unique behaviors</li>
                         <li>2D mode: Conway's Game of Life variants</li>
                         <li>1D mode: Wolfram elementary automata</li>
+                        <li>Enable parallax for scroll-based effects</li>
                     </ul>
                 </div>
             </div>
         </div>
+
+        <section class="demo-section">
+            <h2>About Cellular Automata</h2>
+            <div class="demo-content">
+                <p>Cellular automata are discrete mathematical models that demonstrate how complex patterns and behaviors can emerge from simple rules. Each cell in a grid follows basic rules based on its neighbors' states.</p>
+            </div>
+        </section>
+
+        <section class="demo-section">
+            <h2>The Beauty of Emergence</h2>
+            <div class="demo-content">
+                <p>Watch as simple rules create intricate, unpredictable patterns. From Conway's Game of Life to Wolfram's elementary rules, cellular automata reveal the hidden complexity in simplicity.</p>
+            </div>
+        </section>
+
+        <section class="demo-section">
+            <h2>Explore and Create</h2>
+            <div class="demo-content">
+                <p>Use the controls to customize rules, draw your own patterns, or load classic examples. Experiment with different configurations to discover unique behaviors and fascinating emergent structures.</p>
+            </div>
+        </section>
     </div>
 
     <script src="script.js"></script>

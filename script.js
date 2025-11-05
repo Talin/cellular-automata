@@ -37,6 +37,11 @@ class CellularAutomata {
         this.isDrawing = false;
         this.drawValue = true;
 
+        // Parallax settings
+        this.parallaxEnabled = false;
+        this.parallaxIntensity = 0.5; // 0-1 range
+        this.canvasContainer = document.querySelector('.canvas-container');
+
         this.init();
     }
 
@@ -183,6 +188,27 @@ class CellularAutomata {
                 const preset = btn.getAttribute('data-preset');
                 this.loadPreset(preset);
             });
+        });
+
+        // Parallax toggle
+        const parallaxToggle = document.getElementById('parallax-toggle');
+        parallaxToggle.addEventListener('change', (e) => {
+            this.parallaxEnabled = e.target.checked;
+            if (this.parallaxEnabled) {
+                this.canvasContainer.classList.add('parallax-enabled');
+                this.setupParallax();
+            } else {
+                this.canvasContainer.classList.remove('parallax-enabled');
+                this.canvasContainer.style.transform = '';
+                this.canvasContainer.style.opacity = '';
+            }
+        });
+
+        // Parallax intensity slider
+        const parallaxIntensity = document.getElementById('parallax-intensity');
+        parallaxIntensity.addEventListener('input', (e) => {
+            this.parallaxIntensity = parseInt(e.target.value) / 100;
+            document.getElementById('parallax-intensity-value').textContent = e.target.value;
         });
     }
 
@@ -530,6 +556,70 @@ class CellularAutomata {
         }
 
         container.appendChild(table);
+    }
+
+    setupParallax() {
+        // Remove existing scroll listener if any
+        if (this.scrollHandler) {
+            window.removeEventListener('scroll', this.scrollHandler);
+        }
+
+        // Create and bind scroll handler
+        this.scrollHandler = () => this.handleParallaxScroll();
+        window.addEventListener('scroll', this.scrollHandler, { passive: true });
+
+        // Initial call
+        this.handleParallaxScroll();
+    }
+
+    handleParallaxScroll() {
+        if (!this.parallaxEnabled) return;
+
+        const rect = this.canvasContainer.getBoundingClientRect();
+        const windowHeight = window.innerHeight;
+        const elementTop = rect.top;
+        const elementBottom = rect.bottom;
+        const elementHeight = rect.height;
+
+        // Calculate visibility percentage (0 to 1)
+        let visiblePercentage;
+
+        if (elementTop >= windowHeight || elementBottom <= 0) {
+            // Element is out of view
+            visiblePercentage = 0;
+        } else if (elementTop <= 0 && elementBottom >= windowHeight) {
+            // Element fills entire viewport
+            visiblePercentage = 1;
+        } else if (elementTop > 0 && elementBottom < windowHeight) {
+            // Element is fully visible within viewport
+            visiblePercentage = 1;
+        } else if (elementTop > 0) {
+            // Element is entering from bottom
+            visiblePercentage = (windowHeight - elementTop) / elementHeight;
+        } else {
+            // Element is leaving from top
+            visiblePercentage = elementBottom / elementHeight;
+        }
+
+        // Normalize scroll progress (-1 to 1, where 0 is centered)
+        const elementCenter = elementTop + elementHeight / 2;
+        const viewportCenter = windowHeight / 2;
+        const scrollProgress = (viewportCenter - elementCenter) / windowHeight;
+
+        // Apply parallax transformations
+        const translateY = scrollProgress * 100 * this.parallaxIntensity;
+        const scale = 1 + (Math.abs(scrollProgress) * 0.1 * this.parallaxIntensity);
+        const opacity = Math.max(0.3, Math.min(1, visiblePercentage + 0.3));
+
+        // Apply transforms
+        this.canvasContainer.style.transform = `translateY(${translateY}px) scale(${1 / scale})`;
+        this.canvasContainer.style.opacity = opacity;
+
+        // Optional: Adjust animation speed based on visibility
+        if (this.isPlaying && this.parallaxEnabled) {
+            const speedMultiplier = 0.5 + (visiblePercentage * 0.5);
+            // Could adjust FPS here if desired
+        }
     }
 }
 
