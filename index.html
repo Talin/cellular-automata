@@ -16,6 +16,7 @@
         <div class="main-content">
             <div class="canvas-container">
                 <canvas id="canvas"></canvas>
+                <button id="fullscreen-toggle" class="fullscreen-btn" title="Toggle Fullscreen">⛶</button>
             </div>
 
             <div class="controls-panel">
@@ -125,6 +126,14 @@
                         <div class="slider-group">
                             <label for="parallax-intensity">Intensity: <span id="parallax-intensity-value">50</span>%</label>
                             <input type="range" id="parallax-intensity" min="0" max="100" value="50">
+                        </div>
+                        <label class="toggle-label">
+                            <input type="checkbox" id="depth-parallax-toggle">
+                            <span class="toggle-text">3D Depth Effect</span>
+                        </label>
+                        <div class="slider-group">
+                            <label for="depth-layers">Depth Layers: <span id="depth-layers-value">5</span></label>
+                            <input type="range" id="depth-layers" min="2" max="10" value="5">
                         </div>
                         <p class="parallax-info">Scroll the page to see the effect!</p>
                     </div>

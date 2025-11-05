@@ -15,6 +15,7 @@ class CellularAutomata {
         // Grid state
         this.grid = [];
         this.nextGrid = [];
+        this.depthGrid = []; // Depth values for 3D effect
 
         // 1D automata settings
         this.rule = 30;
@@ -40,7 +41,13 @@ class CellularAutomata {
         // Parallax settings
         this.parallaxEnabled = false;
         this.parallaxIntensity = 0.5; // 0-1 range
+        this.depthParallaxEnabled = false;
+        this.depthLayers = 5; // Number of depth layers
+        this.scrollOffset = 0; // Current scroll-based offset
         this.canvasContainer = document.querySelector('.canvas-container');
+
+        // Fullscreen state
+        this.isFullscreen = false;
 
         this.init();
     }
@@ -65,13 +72,17 @@ class CellularAutomata {
     initGrid() {
         this.grid = [];
         this.nextGrid = [];
+        this.depthGrid = [];
 
         for (let i = 0; i < this.rows; i++) {
             this.grid[i] = [];
             this.nextGrid[i] = [];
+            this.depthGrid[i] = [];
             for (let j = 0; j < this.cols; j++) {
                 this.grid[i][j] = 0;
                 this.nextGrid[i][j] = 0;
+                // Assign random depth value (0 to depthLayers-1)
+                this.depthGrid[i][j] = Math.floor(Math.random() * this.depthLayers);
             }
         }
 
@@ -209,6 +220,33 @@ class CellularAutomata {
         parallaxIntensity.addEventListener('input', (e) => {
             this.parallaxIntensity = parseInt(e.target.value) / 100;
             document.getElementById('parallax-intensity-value').textContent = e.target.value;
+        });
+
+        // Depth parallax toggle
+        const depthParallaxToggle = document.getElementById('depth-parallax-toggle');
+        depthParallaxToggle.addEventListener('change', (e) => {
+            this.depthParallaxEnabled = e.target.checked;
+            this.render();
+        });
+
+        // Depth layers slider
+        const depthLayers = document.getElementById('depth-layers');
+        depthLayers.addEventListener('input', (e) => {
+            this.depthLayers = parseInt(e.target.value);
+            document.getElementById('depth-layers-value').textContent = e.target.value;
+            // Reinitialize depth grid with new layer count
+            for (let i = 0; i < this.rows; i++) {
+                for (let j = 0; j < this.cols; j++) {
+                    this.depthGrid[i][j] = Math.floor(Math.random() * this.depthLayers);
+                }
+            }
+            this.render();
+        });
+
+        // Fullscreen toggle
+        const fullscreenBtn = document.getElementById('fullscreen-toggle');
+        fullscreenBtn.addEventListener('click', () => {
+            this.toggleFullscreen();
         });
     }
 
@@ -395,20 +433,110 @@ class CellularAutomata {
         this.ctx.fillStyle = this.deadColor;
         this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
 
-        this.ctx.fillStyle = this.aliveColor;
-
-        for (let i = 0; i < this.rows; i++) {
-            for (let j = 0; j < this.cols; j++) {
-                if (this.grid[i][j] === 1) {
-                    this.ctx.fillRect(
-                        j * this.cellSize,
-                        i * this.cellSize,
-                        this.cellSize - 1,
-                        this.cellSize - 1
-                    );
+        if (this.depthParallaxEnabled && this.parallaxEnabled) {
+            // Render with depth-based parallax
+            this.renderWithDepth();
+        } else {
+            // Normal rendering
+            this.ctx.fillStyle = this.aliveColor;
+            for (let i = 0; i < this.rows; i++) {
+                for (let j = 0; j < this.cols; j++) {
+                    if (this.grid[i][j] === 1) {
+                        this.ctx.fillRect(
+                            j * this.cellSize,
+                            i * this.cellSize,
+                            this.cellSize - 1,
+                            this.cellSize - 1
+                        );
+                    }
                 }
             }
         }
+    }
+
+    renderWithDepth() {
+        // Render cells in layers based on depth
+        for (let layer = this.depthLayers - 1; layer >= 0; layer--) {
+            // Calculate parallax offset for this layer
+            const depthFactor = layer / (this.depthLayers - 1); // 0 (far) to 1 (near)
+            const parallaxOffset = this.scrollOffset * depthFactor * this.parallaxIntensity * 2;
+
+            // Adjust opacity and size based on depth
+            const opacity = 0.3 + (depthFactor * 0.7); // Far = dimmer, Near = brighter
+            const sizeMultiplier = 0.7 + (depthFactor * 0.3); // Far = smaller, Near = larger
+
+            // Set color with opacity
+            const color = this.hexToRgb(this.aliveColor);
+            this.ctx.fillStyle = `rgba(${color.r}, ${color.g}, ${color.b}, ${opacity})`;
+
+            // Render cells at this depth layer
+            for (let i = 0; i < this.rows; i++) {
+                for (let j = 0; j < this.cols; j++) {
+                    if (this.grid[i][j] === 1 && this.depthGrid[i][j] === layer) {
+                        const x = j * this.cellSize + parallaxOffset;
+                        const y = i * this.cellSize;
+                        const size = (this.cellSize - 1) * sizeMultiplier;
+                        const offset = ((this.cellSize - 1) - size) / 2; // Center smaller cells
+
+                        this.ctx.fillRect(
+                            x + offset,
+                            y + offset,
+                            size,
+                            size
+                        );
+                    }
+                }
+            }
+        }
+    }
+
+    hexToRgb(hex) {
+        const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+        return result ? {
+            r: parseInt(result[1], 16),
+            g: parseInt(result[2], 16),
+            b: parseInt(result[3], 16)
+        } : { r: 0, g: 255, b: 136 };
+    }
+
+    toggleFullscreen() {
+        this.isFullscreen = !this.isFullscreen;
+
+        if (this.isFullscreen) {
+            this.canvasContainer.classList.add('fullscreen');
+            // Resize canvas to fill screen
+            const oldCellSize = this.cellSize;
+            this.cols = Math.floor(window.innerWidth / this.cellSize);
+            this.rows = Math.floor(window.innerHeight / this.cellSize);
+            this.resizeCanvas();
+
+            // Preserve existing pattern in center
+            const tempGrid = this.grid;
+            const tempDepth = this.depthGrid;
+            this.initGrid();
+
+            // Copy old grid to center of new grid
+            const offsetRow = Math.floor((this.rows - tempGrid.length) / 2);
+            const offsetCol = Math.floor((this.cols - tempGrid[0].length) / 2);
+            for (let i = 0; i < tempGrid.length && i + offsetRow < this.rows; i++) {
+                for (let j = 0; j < tempGrid[0].length && j + offsetCol < this.cols; j++) {
+                    if (offsetRow + i >= 0 && offsetCol + j >= 0) {
+                        this.grid[offsetRow + i][offsetCol + j] = tempGrid[i][j];
+                        this.depthGrid[offsetRow + i][offsetCol + j] = tempDepth[i][j];
+                    }
+                }
+            }
+        } else {
+            this.canvasContainer.classList.remove('fullscreen');
+            // Restore normal size
+            this.cellSize = 8;
+            this.cols = 100;
+            this.rows = 80;
+            this.resizeCanvas();
+            this.initGrid();
+        }
+
+        this.render();
     }
 
     loadPreset(preset) {
@@ -606,19 +734,23 @@ class CellularAutomata {
         const viewportCenter = windowHeight / 2;
         const scrollProgress = (viewportCenter - elementCenter) / windowHeight;
 
-        // Apply parallax transformations
-        const translateY = scrollProgress * 100 * this.parallaxIntensity;
-        const scale = 1 + (Math.abs(scrollProgress) * 0.1 * this.parallaxIntensity);
-        const opacity = Math.max(0.3, Math.min(1, visiblePercentage + 0.3));
+        // Store scroll offset for depth parallax
+        this.scrollOffset = scrollProgress * 100;
 
-        // Apply transforms
-        this.canvasContainer.style.transform = `translateY(${translateY}px) scale(${1 / scale})`;
-        this.canvasContainer.style.opacity = opacity;
+        // Apply parallax transformations to container
+        if (!this.depthParallaxEnabled) {
+            const translateY = scrollProgress * 100 * this.parallaxIntensity;
+            const scale = 1 + (Math.abs(scrollProgress) * 0.1 * this.parallaxIntensity);
+            const opacity = Math.max(0.3, Math.min(1, visiblePercentage + 0.3));
 
-        // Optional: Adjust animation speed based on visibility
-        if (this.isPlaying && this.parallaxEnabled) {
-            const speedMultiplier = 0.5 + (visiblePercentage * 0.5);
-            // Could adjust FPS here if desired
+            this.canvasContainer.style.transform = `translateY(${translateY}px) scale(${1 / scale})`;
+            this.canvasContainer.style.opacity = opacity;
+        } else {
+            // Reset container transform when using depth parallax
+            this.canvasContainer.style.transform = '';
+            this.canvasContainer.style.opacity = '1';
+            // Re-render with depth effect
+            this.render();
         }
     }
 }
