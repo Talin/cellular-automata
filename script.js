@@ -53,6 +53,10 @@ class CellularAutomata {
         this.isFullscreen = false;
         this.wasParallaxEnabled = false; // Store state before fullscreen
 
+        // Eraser settings
+        this.eraserSize = 3; // Radius in cells
+        this.isErasing = false;
+
         this.init();
     }
 
@@ -169,8 +173,17 @@ class CellularAutomata {
         // Canvas mouse events
         this.canvas.addEventListener('mousedown', (e) => this.handleMouseDown(e));
         this.canvas.addEventListener('mousemove', (e) => this.handleMouseMove(e));
-        this.canvas.addEventListener('mouseup', () => this.isDrawing = false);
-        this.canvas.addEventListener('mouseleave', () => this.isDrawing = false);
+        this.canvas.addEventListener('mouseup', () => {
+            this.isDrawing = false;
+            this.isErasing = false;
+        });
+        this.canvas.addEventListener('mouseleave', () => {
+            this.isDrawing = false;
+            this.isErasing = false;
+            // Hide eraser cursor when leaving canvas
+            const cursor = document.getElementById('eraser-cursor');
+            if (cursor) cursor.style.display = 'none';
+        });
 
         // Touch events for mobile
         this.canvas.addEventListener('touchstart', (e) => {
@@ -266,6 +279,20 @@ class CellularAutomata {
         fullscreenBtn.addEventListener('click', () => {
             this.toggleFullscreen();
         });
+
+        // Eraser size slider
+        const eraserSize = document.getElementById('eraser-size');
+        eraserSize.addEventListener('input', (e) => {
+            this.eraserSize = parseInt(e.target.value);
+            document.getElementById('eraser-size-value').textContent = e.target.value;
+        });
+
+        // Window resize for responsive fullscreen
+        window.addEventListener('resize', () => {
+            if (this.isFullscreen) {
+                this.resizeFullscreenCanvas();
+            }
+        });
     }
 
     setMode(mode) {
@@ -291,38 +318,96 @@ class CellularAutomata {
     }
 
     handleMouseDown(e) {
-        // Disable drawing in fullscreen mode
-        if (this.isFullscreen) return;
+        if (this.isFullscreen) {
+            // Enable erasing in fullscreen mode
+            this.isErasing = true;
+            this.eraseAtPosition(e);
+        } else {
+            // Normal drawing mode
+            this.isDrawing = true;
+            const rect = this.canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
 
-        this.isDrawing = true;
-        const rect = this.canvas.getBoundingClientRect();
-        const x = e.clientX - rect.left;
-        const y = e.clientY - rect.top;
+            const col = Math.floor(x / this.cellSize);
+            const row = Math.floor(y / this.cellSize);
 
-        const col = Math.floor(x / this.cellSize);
-        const row = Math.floor(y / this.cellSize);
-
-        if (row >= 0 && row < this.rows && col >= 0 && col < this.cols) {
-            this.drawValue = !this.grid[row][col];
-            this.grid[row][col] = this.drawValue ? 1 : 0;
-            this.render();
+            if (row >= 0 && row < this.rows && col >= 0 && col < this.cols) {
+                this.drawValue = !this.grid[row][col];
+                this.grid[row][col] = this.drawValue ? 1 : 0;
+                this.render();
+            }
         }
     }
 
     handleMouseMove(e) {
-        if (!this.isDrawing || this.isFullscreen) return;
+        if (this.isFullscreen && this.isErasing) {
+            // Erase cells in fullscreen
+            this.eraseAtPosition(e);
+        } else if (this.isDrawing && !this.isFullscreen) {
+            // Normal drawing mode
+            const rect = this.canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
 
+            const col = Math.floor(x / this.cellSize);
+            const row = Math.floor(y / this.cellSize);
+
+            if (row >= 0 && row < this.rows && col >= 0 && col < this.cols) {
+                this.grid[row][col] = this.drawValue ? 1 : 0;
+                this.render();
+            }
+        }
+
+        // Update custom cursor position in fullscreen
+        if (this.isFullscreen) {
+            this.updateEraserCursor(e);
+        }
+    }
+
+    eraseAtPosition(e) {
         const rect = this.canvas.getBoundingClientRect();
         const x = e.clientX - rect.left;
         const y = e.clientY - rect.top;
 
-        const col = Math.floor(x / this.cellSize);
-        const row = Math.floor(y / this.cellSize);
+        const centerCol = Math.floor(x / this.cellSize);
+        const centerRow = Math.floor(y / this.cellSize);
 
-        if (row >= 0 && row < this.rows && col >= 0 && col < this.cols) {
-            this.grid[row][col] = this.drawValue ? 1 : 0;
-            this.render();
+        // Erase in a circular area around the cursor
+        for (let i = -this.eraserSize; i <= this.eraserSize; i++) {
+            for (let j = -this.eraserSize; j <= this.eraserSize; j++) {
+                const row = centerRow + i;
+                const col = centerCol + j;
+
+                // Check if within eraser radius (circular)
+                const distance = Math.sqrt(i * i + j * j);
+                if (distance <= this.eraserSize &&
+                    row >= 0 && row < this.rows &&
+                    col >= 0 && col < this.cols) {
+                    this.grid[row][col] = 0; // Erase cell
+                }
+            }
         }
+
+        this.render();
+    }
+
+    updateEraserCursor(e) {
+        // Create or update custom cursor indicator
+        let cursor = document.getElementById('eraser-cursor');
+        if (!cursor) {
+            cursor = document.createElement('div');
+            cursor.id = 'eraser-cursor';
+            cursor.className = 'eraser-cursor';
+            document.body.appendChild(cursor);
+        }
+
+        const size = this.eraserSize * this.cellSize * 2;
+        cursor.style.width = size + 'px';
+        cursor.style.height = size + 'px';
+        cursor.style.left = (e.clientX - size / 2) + 'px';
+        cursor.style.top = (e.clientY - size / 2) + 'px';
+        cursor.style.display = 'block';
     }
 
     play() {
@@ -575,6 +660,10 @@ class CellularAutomata {
         } else {
             this.canvasContainer.classList.remove('fullscreen');
 
+            // Hide eraser cursor
+            const cursor = document.getElementById('eraser-cursor');
+            if (cursor) cursor.style.display = 'none';
+
             // Restore body height
             document.body.style.minHeight = '100vh';
 
@@ -595,6 +684,39 @@ class CellularAutomata {
             this.rows = 80;
             this.resizeCanvas();
             this.initGrid();
+        }
+
+        this.render();
+    }
+
+    resizeFullscreenCanvas() {
+        // Save current grid
+        const tempGrid = this.grid;
+        const tempDepth = this.depthGrid;
+        const oldCols = this.cols;
+        const oldRows = this.rows;
+
+        // Calculate new dimensions
+        this.cols = Math.floor(window.innerWidth / this.cellSize);
+        this.rows = Math.floor(window.innerHeight / this.cellSize);
+        this.resizeCanvas();
+
+        // Initialize new grid
+        this.initGrid();
+
+        // Copy old grid to center of new grid
+        const offsetRow = Math.floor((this.rows - oldRows) / 2);
+        const offsetCol = Math.floor((this.cols - oldCols) / 2);
+
+        for (let i = 0; i < oldRows; i++) {
+            for (let j = 0; j < oldCols; j++) {
+                const newRow = offsetRow + i;
+                const newCol = offsetCol + j;
+                if (newRow >= 0 && newRow < this.rows && newCol >= 0 && newCol < this.cols) {
+                    this.grid[newRow][newCol] = tempGrid[i][j];
+                    this.depthGrid[newRow][newCol] = tempDepth[i][j];
+                }
+            }
         }
 
         this.render();
