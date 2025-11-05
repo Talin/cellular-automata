@@ -41,13 +41,17 @@ class CellularAutomata {
         // Parallax settings
         this.parallaxEnabled = false;
         this.parallaxIntensity = 0.5; // 0-1 range
+        this.parallaxSpeed = 1.0; // Scroll speed multiplier
+        this.parallaxDirection = 'both'; // 'horizontal', 'vertical', or 'both'
         this.depthParallaxEnabled = false;
         this.depthLayers = 5; // Number of depth layers
-        this.scrollOffset = 0; // Current scroll-based offset
+        this.scrollOffset = 0; // Current scroll-based offset (horizontal)
+        this.scrollOffsetY = 0; // Vertical scroll offset
         this.canvasContainer = document.querySelector('.canvas-container');
 
         // Fullscreen state
         this.isFullscreen = false;
+        this.wasParallaxEnabled = false; // Store state before fullscreen
 
         this.init();
     }
@@ -222,6 +226,20 @@ class CellularAutomata {
             document.getElementById('parallax-intensity-value').textContent = e.target.value;
         });
 
+        // Parallax speed slider
+        const parallaxSpeed = document.getElementById('parallax-speed');
+        parallaxSpeed.addEventListener('input', (e) => {
+            this.parallaxSpeed = parseFloat(e.target.value);
+            document.getElementById('parallax-speed-value').textContent = e.target.value;
+        });
+
+        // Parallax direction selector
+        const parallaxDirection = document.getElementById('parallax-direction');
+        parallaxDirection.addEventListener('change', (e) => {
+            this.parallaxDirection = e.target.value;
+            this.render();
+        });
+
         // Depth parallax toggle
         const depthParallaxToggle = document.getElementById('depth-parallax-toggle');
         depthParallaxToggle.addEventListener('change', (e) => {
@@ -273,6 +291,9 @@ class CellularAutomata {
     }
 
     handleMouseDown(e) {
+        // Disable drawing in fullscreen mode
+        if (this.isFullscreen) return;
+
         this.isDrawing = true;
         const rect = this.canvas.getBoundingClientRect();
         const x = e.clientX - rect.left;
@@ -289,7 +310,7 @@ class CellularAutomata {
     }
 
     handleMouseMove(e) {
-        if (!this.isDrawing) return;
+        if (!this.isDrawing || this.isFullscreen) return;
 
         const rect = this.canvas.getBoundingClientRect();
         const x = e.clientX - rect.left;
@@ -459,7 +480,17 @@ class CellularAutomata {
         for (let layer = this.depthLayers - 1; layer >= 0; layer--) {
             // Calculate parallax offset for this layer
             const depthFactor = layer / (this.depthLayers - 1); // 0 (far) to 1 (near)
-            const parallaxOffset = this.scrollOffset * depthFactor * this.parallaxIntensity * 2;
+
+            // Apply parallax based on direction setting
+            let parallaxOffsetX = 0;
+            let parallaxOffsetY = 0;
+
+            if (this.parallaxDirection === 'horizontal' || this.parallaxDirection === 'both') {
+                parallaxOffsetX = this.scrollOffset * depthFactor * this.parallaxIntensity * 2 * this.parallaxSpeed;
+            }
+            if (this.parallaxDirection === 'vertical' || this.parallaxDirection === 'both') {
+                parallaxOffsetY = this.scrollOffsetY * depthFactor * this.parallaxIntensity * 2 * this.parallaxSpeed;
+            }
 
             // Adjust opacity and size based on depth
             const opacity = 0.3 + (depthFactor * 0.7); // Far = dimmer, Near = brighter
@@ -473,8 +504,8 @@ class CellularAutomata {
             for (let i = 0; i < this.rows; i++) {
                 for (let j = 0; j < this.cols; j++) {
                     if (this.grid[i][j] === 1 && this.depthGrid[i][j] === layer) {
-                        const x = j * this.cellSize + parallaxOffset;
-                        const y = i * this.cellSize;
+                        const x = j * this.cellSize + parallaxOffsetX;
+                        const y = i * this.cellSize + parallaxOffsetY;
                         const size = (this.cellSize - 1) * sizeMultiplier;
                         const offset = ((this.cellSize - 1) - size) / 2; // Center smaller cells
 
@@ -503,7 +534,22 @@ class CellularAutomata {
         this.isFullscreen = !this.isFullscreen;
 
         if (this.isFullscreen) {
+            // Store previous parallax state
+            this.wasParallaxEnabled = this.parallaxEnabled;
+            this.wasDepthParallaxEnabled = this.depthParallaxEnabled;
+
+            // Auto-enable parallax for fullscreen mode
+            this.parallaxEnabled = true;
+            this.depthParallaxEnabled = true;
+            document.getElementById('parallax-toggle').checked = true;
+            document.getElementById('depth-parallax-toggle').checked = true;
+
+            // Make body tall enough to scroll
+            document.body.style.minHeight = '300vh';
+
             this.canvasContainer.classList.add('fullscreen');
+            this.setupParallax(); // Re-setup parallax listeners
+
             // Resize canvas to fill screen
             const oldCellSize = this.cellSize;
             this.cols = Math.floor(window.innerWidth / this.cellSize);
@@ -528,6 +574,21 @@ class CellularAutomata {
             }
         } else {
             this.canvasContainer.classList.remove('fullscreen');
+
+            // Restore body height
+            document.body.style.minHeight = '100vh';
+
+            // Restore previous parallax state
+            this.parallaxEnabled = this.wasParallaxEnabled;
+            this.depthParallaxEnabled = this.wasDepthParallaxEnabled;
+            document.getElementById('parallax-toggle').checked = this.parallaxEnabled;
+            document.getElementById('depth-parallax-toggle').checked = this.depthParallaxEnabled;
+
+            if (!this.parallaxEnabled) {
+                this.canvasContainer.style.transform = '';
+                this.canvasContainer.style.opacity = '';
+            }
+
             // Restore normal size
             this.cellSize = 8;
             this.cols = 100;
@@ -734,12 +795,20 @@ class CellularAutomata {
         const viewportCenter = windowHeight / 2;
         const scrollProgress = (viewportCenter - elementCenter) / windowHeight;
 
-        // Store scroll offset for depth parallax
+        // Store horizontal scroll offset for depth parallax
         this.scrollOffset = scrollProgress * 100;
+
+        // Calculate vertical scroll offset based on absolute scroll position
+        // In fullscreen, use the scroll position directly
+        const scrollY = window.pageYOffset || document.documentElement.scrollTop;
+        const maxScroll = document.documentElement.scrollHeight - windowHeight;
+        const scrollPercentage = maxScroll > 0 ? scrollY / maxScroll : 0;
+        // Map scroll percentage to -1 to 1 range (centered at 0.5)
+        this.scrollOffsetY = (scrollPercentage - 0.5) * 200; // -100 to 100
 
         // Apply parallax transformations to container
         if (!this.depthParallaxEnabled) {
-            const translateY = scrollProgress * 100 * this.parallaxIntensity;
+            const translateY = scrollProgress * 100 * this.parallaxIntensity * this.parallaxSpeed;
             const scale = 1 + (Math.abs(scrollProgress) * 0.1 * this.parallaxIntensity);
             const opacity = Math.max(0.3, Math.min(1, visiblePercentage + 0.3));
 

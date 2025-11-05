@@ -127,6 +127,18 @@
                             <label for="parallax-intensity">Intensity: <span id="parallax-intensity-value">50</span>%</label>
                             <input type="range" id="parallax-intensity" min="0" max="100" value="50">
                         </div>
+                        <div class="slider-group">
+                            <label for="parallax-speed">Scroll Speed: <span id="parallax-speed-value">1.0</span>x</label>
+                            <input type="range" id="parallax-speed" min="0.1" max="3.0" step="0.1" value="1.0">
+                        </div>
+                        <div class="slider-group">
+                            <label for="parallax-direction">Direction:</label>
+                            <select id="parallax-direction" class="parallax-select">
+                                <option value="both">Both (H + V)</option>
+                                <option value="horizontal">Horizontal Only</option>
+                                <option value="vertical">Vertical Only</option>
+                            </select>
+                        </div>
                         <label class="toggle-label">
                             <input type="checkbox" id="depth-parallax-toggle">
                             <span class="toggle-text">3D Depth Effect</span>
@@ -135,7 +147,7 @@
                             <label for="depth-layers">Depth Layers: <span id="depth-layers-value">5</span></label>
                             <input type="range" id="depth-layers" min="2" max="10" value="5">
                         </div>
-                        <p class="parallax-info">Scroll the page to see the effect!</p>
+                        <p class="parallax-info">Scroll the page to see the effect! (Auto-enabled in fullscreen)</p>
                     </div>
                 </div>
 

@@ -121,6 +121,12 @@ canvas {
     box-shadow: 0 0 30px rgba(0, 255, 136, 0.2);
 }
 
+.canvas-container.fullscreen canvas {
+    cursor: default;
+    border: none;
+    border-radius: 0;
+}
+
 .controls-panel {
     background: rgba(255, 255, 255, 0.05);
     border-radius: 15px;
@@ -486,6 +492,35 @@ input[type="color"]::-webkit-color-swatch {
     font-size: 0.85em;
     color: #00d4ff;
     font-style: italic;
+}
+
+.parallax-select {
+    width: 100%;
+    padding: 10px;
+    border: none;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.1);
+    color: #e0e0e0;
+    cursor: pointer;
+    font-size: 0.95em;
+    outline: none;
+    transition: all 0.3s ease;
+    border: 2px solid rgba(255, 255, 255, 0.1);
+}
+
+.parallax-select:hover {
+    background: rgba(0, 255, 136, 0.1);
+    border-color: rgba(0, 255, 136, 0.3);
+}
+
+.parallax-select:focus {
+    border-color: #00ff88;
+    background: rgba(0, 255, 136, 0.15);
+}
+
+.parallax-select option {
+    background: #1a1a2e;
+    color: #e0e0e0;
 }
 
 /* Demo Sections */
