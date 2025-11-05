@@ -682,7 +682,9 @@ class CellularAutomata {
                 document.getElementById('rule-slider').value = 30;
                 document.getElementById('rule-value').textContent = 30;
                 this.updateRuleVisualization();
-                this.grid[0][Math.floor(this.cols / 2)] = 1;
+                const col30 = Math.floor(this.cols / 2);
+                this.grid[0][col30] = 1;
+                this.depthGrid[0][col30] = Math.floor(this.depthLayers / 2);
                 break;
 
             case 'rule110':
@@ -691,7 +693,9 @@ class CellularAutomata {
                 document.getElementById('rule-slider').value = 110;
                 document.getElementById('rule-value').textContent = 110;
                 this.updateRuleVisualization();
-                this.grid[0][Math.floor(this.cols / 2)] = 1;
+                const col110 = Math.floor(this.cols / 2);
+                this.grid[0][col110] = 1;
+                this.depthGrid[0][col110] = Math.floor(this.depthLayers / 2);
                 break;
         }
 
@@ -699,12 +703,19 @@ class CellularAutomata {
     }
 
     setPattern(startRow, startCol, pattern) {
+        // Use middle depth layer for all preset patterns so they're clearly visible
+        const presetDepth = Math.floor(this.depthLayers / 2);
+
         for (let i = 0; i < pattern.length; i++) {
             for (let j = 0; j < pattern[i].length; j++) {
                 const row = startRow + i;
                 const col = startCol + j;
                 if (row >= 0 && row < this.rows && col >= 0 && col < this.cols) {
                     this.grid[row][col] = pattern[i][j];
+                    // Set all pattern cells to the same depth for consistent appearance
+                    if (pattern[i][j] === 1) {
+                        this.depthGrid[row][col] = presetDepth;
+                    }
                 }
             }
         }
