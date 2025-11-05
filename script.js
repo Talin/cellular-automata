@@ -56,6 +56,8 @@ class CellularAutomata {
         // Eraser settings
         this.eraserSize = 3; // Radius in cells
         this.isErasing = false;
+        this.regenerationRate = 0.2; // 0-1, probability of cell regeneration per frame
+        this.erasedCells = []; // Track positions of erased cells
 
         this.init();
     }
@@ -65,6 +67,21 @@ class CellularAutomata {
         this.initGrid();
         this.setupEventListeners();
         this.render();
+        // Start continuous regeneration loop
+        this.startRegenerationLoop();
+    }
+
+    startRegenerationLoop() {
+        // Run regeneration independently of animation
+        setInterval(() => {
+            if (this.erasedCells.length > 0 && this.regenerationRate > 0) {
+                this.regenerateCells();
+                if (!this.isPlaying) {
+                    // Only re-render if not already animating
+                    this.render();
+                }
+            }
+        }, 100); // Check every 100ms
     }
 
     resizeCanvas() {
@@ -287,6 +304,13 @@ class CellularAutomata {
             document.getElementById('eraser-size-value').textContent = e.target.value;
         });
 
+        // Regeneration rate slider
+        const regenerationRate = document.getElementById('regeneration-rate');
+        regenerationRate.addEventListener('input', (e) => {
+            this.regenerationRate = parseInt(e.target.value) / 100; // Convert to 0-1
+            document.getElementById('regeneration-rate-value').textContent = e.target.value;
+        });
+
         // Window resize for responsive fullscreen
         window.addEventListener('resize', () => {
             if (this.isFullscreen) {
@@ -384,12 +408,45 @@ class CellularAutomata {
                 if (distance <= this.eraserSize &&
                     row >= 0 && row < this.rows &&
                     col >= 0 && col < this.cols) {
-                    this.grid[row][col] = 0; // Erase cell
+
+                    // If cell was alive, mark it as erased
+                    if (this.grid[row][col] === 1) {
+                        this.grid[row][col] = 0; // Erase cell
+                        // Add to erased cells list if not already there
+                        const key = `${row},${col}`;
+                        if (!this.erasedCells.includes(key)) {
+                            this.erasedCells.push(key);
+                        }
+                    }
                 }
             }
         }
 
         this.render();
+    }
+
+    regenerateCells() {
+        // Only regenerate if there are erased cells and rate > 0
+        if (this.erasedCells.length === 0 || this.regenerationRate === 0) return;
+
+        const newErasedCells = [];
+
+        // Try to regenerate each erased cell based on probability
+        for (const key of this.erasedCells) {
+            const [row, col] = key.split(',').map(Number);
+
+            // Random chance to regenerate based on rate
+            if (Math.random() < this.regenerationRate * 0.01) { // Slow it down further
+                // Regenerate cell with random depth
+                this.grid[row][col] = 1;
+                this.depthGrid[row][col] = Math.floor(Math.random() * this.depthLayers);
+            } else {
+                // Keep in erased list
+                newErasedCells.push(key);
+            }
+        }
+
+        this.erasedCells = newErasedCells;
     }
 
     updateEraserCursor(e) {
@@ -426,6 +483,7 @@ class CellularAutomata {
 
     clear() {
         this.pause();
+        this.erasedCells = []; // Clear erased cells tracking
         this.initGrid();
         this.render();
     }
@@ -458,6 +516,7 @@ class CellularAutomata {
         if (deltaTime >= frameInterval) {
             this.lastFrameTime = currentTime - (deltaTime % frameInterval);
             this.update();
+            this.regenerateCells(); // Regenerate erased cells gradually
             this.render();
         }
 
