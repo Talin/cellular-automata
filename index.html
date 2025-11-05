@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cellular Automata Studio</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🔬 Cellular Automata Studio</h1>
+            <p>Create and animate beautiful patterns with cellular automata</p>
+        </header>
+
+        <div class="main-content">
+            <div class="canvas-container">
+                <canvas id="canvas"></canvas>
+            </div>
+
+            <div class="controls-panel">
+                <div class="control-section">
+                    <h3>Automata Type</h3>
+                    <div class="button-group">
+                        <button id="mode-2d" class="mode-btn active">2D (Game of Life)</button>
+                        <button id="mode-1d" class="mode-btn">1D (Elementary)</button>
+                    </div>
+                </div>
+
+                <div class="control-section">
+                    <h3>Animation Controls</h3>
+                    <div class="button-group">
+                        <button id="play-btn" class="control-btn">▶ Play</button>
+                        <button id="pause-btn" class="control-btn">⏸ Pause</button>
+                        <button id="step-btn" class="control-btn">⏭ Step</button>
+                        <button id="clear-btn" class="control-btn">🗑 Clear</button>
+                        <button id="random-btn" class="control-btn">🎲 Random</button>
+                    </div>
+                    <div class="slider-group">
+                        <label for="speed-slider">Speed: <span id="speed-value">10</span> fps</label>
+                        <input type="range" id="speed-slider" min="1" max="60" value="10">
+                    </div>
+                </div>
+
+                <div class="control-section" id="mode-2d-controls">
+                    <h3>2D Rules</h3>
+                    <div class="rule-group">
+                        <label>Birth (dead → alive):</label>
+                        <div class="checkbox-group">
+                            <label><input type="checkbox" class="birth-rule" value="0"> 0</label>
+                            <label><input type="checkbox" class="birth-rule" value="1"> 1</label>
+                            <label><input type="checkbox" class="birth-rule" value="2"> 2</label>
+                            <label><input type="checkbox" class="birth-rule" value="3" checked> 3</label>
+                            <label><input type="checkbox" class="birth-rule" value="4"> 4</label>
+                            <label><input type="checkbox" class="birth-rule" value="5"> 5</label>
+                            <label><input type="checkbox" class="birth-rule" value="6"> 6</label>
+                            <label><input type="checkbox" class="birth-rule" value="7"> 7</label>
+                            <label><input type="checkbox" class="birth-rule" value="8"> 8</label>
+                        </div>
+                    </div>
+                    <div class="rule-group">
+                        <label>Survival (alive → alive):</label>
+                        <div class="checkbox-group">
+                            <label><input type="checkbox" class="survival-rule" value="0"> 0</label>
+                            <label><input type="checkbox" class="survival-rule" value="1"> 1</label>
+                            <label><input type="checkbox" class="survival-rule" value="2" checked> 2</label>
+                            <label><input type="checkbox" class="survival-rule" value="3" checked> 3</label>
+                            <label><input type="checkbox" class="survival-rule" value="4"> 4</label>
+                            <label><input type="checkbox" class="survival-rule" value="5"> 5</label>
+                            <label><input type="checkbox" class="survival-rule" value="6"> 6</label>
+                            <label><input type="checkbox" class="survival-rule" value="7"> 7</label>
+                            <label><input type="checkbox" class="survival-rule" value="8"> 8</label>
+                        </div>
+                    </div>
+                    <div class="slider-group">
+                        <label for="cell-size-slider">Cell Size: <span id="cell-size-value">8</span>px</label>
+                        <input type="range" id="cell-size-slider" min="2" max="20" value="8">
+                    </div>
+                </div>
+
+                <div class="control-section hidden" id="mode-1d-controls">
+                    <h3>1D Rule</h3>
+                    <div class="slider-group">
+                        <label for="rule-slider">Rule Number: <span id="rule-value">30</span></label>
+                        <input type="range" id="rule-slider" min="0" max="255" value="30">
+                    </div>
+                    <div id="rule-visualization"></div>
+                </div>
+
+                <div class="control-section">
+                    <h3>Presets</h3>
+                    <div class="preset-buttons">
+                        <button class="preset-btn" data-preset="glider">Glider</button>
+                        <button class="preset-btn" data-preset="blinker">Blinker</button>
+                        <button class="preset-btn" data-preset="toad">Toad</button>
+                        <button class="preset-btn" data-preset="beacon">Beacon</button>
+                        <button class="preset-btn" data-preset="pulsar">Pulsar</button>
+                        <button class="preset-btn" data-preset="gosper">Gosper Gun</button>
+                        <button class="preset-btn" data-preset="rule30">Rule 30</button>
+                        <button class="preset-btn" data-preset="rule110">Rule 110</button>
+                    </div>
+                </div>
+
+                <div class="control-section">
+                    <h3>Colors</h3>
+                    <div class="color-group">
+                        <label>
+                            Live Cell:
+                            <input type="color" id="alive-color" value="#00ff88">
+                        </label>
+                        <label>
+                            Dead Cell:
+                            <input type="color" id="dead-color" value="#0a0a0a">
+                        </label>
+                    </div>
+                </div>
+
+                <div class="info-section">
+                    <p><strong>Instructions:</strong></p>
+                    <ul>
+                        <li>Click/drag on canvas to draw cells</li>
+                        <li>Use presets for famous patterns</li>
+                        <li>Customize rules for unique behaviors</li>
+                        <li>2D mode: Conway's Game of Life variants</li>
+                        <li>1D mode: Wolfram elementary automata</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
