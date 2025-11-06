@@ -59,6 +59,13 @@ class CellularAutomata {
         this.regenerationRate = 0.2; // 0-1, probability of cell regeneration per frame
         this.erasedCells = []; // Track positions of erased cells
 
+        // Image dithering settings
+        this.uploadedImage = null;
+        this.ditherThreshold = 128;
+        this.ditherContrast = 1.0;
+        this.ditherScale = 1.0;
+        this.isDitheredImage = false;
+
         this.init();
     }
 
@@ -316,6 +323,51 @@ class CellularAutomata {
             if (this.isFullscreen) {
                 this.resizeFullscreenCanvas();
             }
+        });
+
+        // Image upload
+        const imageUpload = document.getElementById('image-upload');
+        imageUpload.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                this.loadImage(file);
+            }
+        });
+
+        // Dither threshold slider
+        const ditherThreshold = document.getElementById('dither-threshold');
+        ditherThreshold.addEventListener('input', (e) => {
+            this.ditherThreshold = parseInt(e.target.value);
+            document.getElementById('dither-threshold-value').textContent = e.target.value;
+            if (this.uploadedImage) {
+                this.applyDithering();
+            }
+        });
+
+        // Dither contrast slider
+        const ditherContrast = document.getElementById('dither-contrast');
+        ditherContrast.addEventListener('input', (e) => {
+            this.ditherContrast = parseFloat(e.target.value);
+            document.getElementById('dither-contrast-value').textContent = e.target.value;
+            if (this.uploadedImage) {
+                this.applyDithering();
+            }
+        });
+
+        // Dither scale slider
+        const ditherScale = document.getElementById('dither-scale');
+        ditherScale.addEventListener('input', (e) => {
+            this.ditherScale = parseInt(e.target.value) / 100;
+            document.getElementById('dither-scale-value').textContent = e.target.value;
+            if (this.uploadedImage) {
+                this.applyDithering();
+            }
+        });
+
+        // Clear image button
+        const clearImageBtn = document.getElementById('clear-image-btn');
+        clearImageBtn.addEventListener('click', () => {
+            this.clearImage();
         });
     }
 
@@ -937,6 +989,124 @@ class CellularAutomata {
         }
 
         container.appendChild(table);
+    }
+
+    loadImage(file) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const img = new Image();
+            img.onload = () => {
+                this.uploadedImage = img;
+                this.applyDithering();
+            };
+            img.src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+    }
+
+    applyDithering() {
+        if (!this.uploadedImage) return;
+
+        this.pause();
+        this.isDitheredImage = true;
+
+        // Create temporary canvas to process image
+        const tempCanvas = document.createElement('canvas');
+        const tempCtx = tempCanvas.getContext('2d');
+
+        // Calculate scaled dimensions to fit grid
+        const scaleWidth = Math.floor(this.cols * this.ditherScale);
+        const scaleHeight = Math.floor(this.rows * this.ditherScale);
+
+        tempCanvas.width = scaleWidth;
+        tempCanvas.height = scaleHeight;
+
+        // Draw and scale image
+        tempCtx.drawImage(this.uploadedImage, 0, 0, scaleWidth, scaleHeight);
+
+        // Get image data
+        const imageData = tempCtx.getImageData(0, 0, scaleWidth, scaleHeight);
+        const data = imageData.data;
+
+        // Apply contrast
+        for (let i = 0; i < data.length; i += 4) {
+            // Convert to grayscale
+            const gray = data[i] * 0.299 + data[i + 1] * 0.587 + data[i + 2] * 0.114;
+
+            // Apply contrast
+            const contrasted = ((gray - 128) * this.ditherContrast) + 128;
+
+            data[i] = data[i + 1] = data[i + 2] = contrasted;
+        }
+
+        // Floyd-Steinberg dithering
+        for (let y = 0; y < scaleHeight; y++) {
+            for (let x = 0; x < scaleWidth; x++) {
+                const idx = (y * scaleWidth + x) * 4;
+                const oldPixel = data[idx];
+                const newPixel = oldPixel < this.ditherThreshold ? 0 : 255;
+                const error = oldPixel - newPixel;
+
+                data[idx] = data[idx + 1] = data[idx + 2] = newPixel;
+
+                // Distribute error to neighboring pixels
+                if (x + 1 < scaleWidth) {
+                    const rightIdx = (y * scaleWidth + (x + 1)) * 4;
+                    data[rightIdx] += error * 7 / 16;
+                }
+                if (x - 1 >= 0 && y + 1 < scaleHeight) {
+                    const bottomLeftIdx = ((y + 1) * scaleWidth + (x - 1)) * 4;
+                    data[bottomLeftIdx] += error * 3 / 16;
+                }
+                if (y + 1 < scaleHeight) {
+                    const bottomIdx = ((y + 1) * scaleWidth + x) * 4;
+                    data[bottomIdx] += error * 5 / 16;
+                }
+                if (x + 1 < scaleWidth && y + 1 < scaleHeight) {
+                    const bottomRightIdx = ((y + 1) * scaleWidth + (x + 1)) * 4;
+                    data[bottomRightIdx] += error * 1 / 16;
+                }
+            }
+        }
+
+        // Map dithered image to grid with depth
+        this.initGrid();
+
+        const offsetX = Math.floor((this.cols - scaleWidth) / 2);
+        const offsetY = Math.floor((this.rows - scaleHeight) / 2);
+
+        for (let y = 0; y < scaleHeight; y++) {
+            for (let x = 0; x < scaleWidth; x++) {
+                const idx = (y * scaleWidth + x) * 4;
+                const gridX = offsetX + x;
+                const gridY = offsetY + y;
+
+                if (gridX >= 0 && gridX < this.cols && gridY >= 0 && gridY < this.rows) {
+                    // White pixels become alive cells
+                    this.grid[gridY][gridX] = data[idx] > 128 ? 1 : 0;
+
+                    // Assign depth based on pixel position or brightness for variety
+                    if (this.grid[gridY][gridX] === 1) {
+                        // Create depth variation based on position for interesting parallax
+                        const depthNoise = Math.sin(x * 0.1) * Math.cos(y * 0.1);
+                        const depthIndex = Math.floor((depthNoise + 1) * this.depthLayers / 2);
+                        this.depthGrid[gridY][gridX] = Math.max(0, Math.min(this.depthLayers - 1, depthIndex));
+                    }
+                }
+            }
+        }
+
+        this.render();
+    }
+
+    clearImage() {
+        this.uploadedImage = null;
+        this.isDitheredImage = false;
+        this.initGrid();
+        this.render();
+
+        // Reset file input
+        document.getElementById('image-upload').value = '';
     }
 
     setupParallax() {
