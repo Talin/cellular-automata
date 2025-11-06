@@ -1,10 +1,10 @@
 # Cellular Automata Studio
 
-A beautiful, interactive web application for creating and exploring cellular automata patterns. Experience the mesmerizing world of emergent complexity through 2D (Conway's Game of Life), 1D (Wolfram Elementary) cellular automata, and artistic image dithering with 3D depth effects.
+A beautiful, interactive web application for creating and exploring cellular automata patterns. Experience the mesmerizing world of emergent complexity through both 2D (Conway's Game of Life) and 1D (Wolfram Elementary) cellular automata.
 
 ## Features
 
-### Three Modes of Cellular Automata
+### Two Modes of Cellular Automata
 
 **2D Mode - Game of Life Variants**
 - Classic Conway's Game of Life implementation
@@ -18,13 +18,6 @@ A beautiful, interactive web application for creating and exploring cellular aut
 - Visual rule lookup table
 - Famous patterns like Rule 30 (chaotic) and Rule 110 (universal)
 - Watch patterns evolve from top to bottom
-
-**Dither Mode - Image Processing**
-- Upload images for artistic dithering effects
-- Floyd-Steinberg dithering algorithm
-- Adjustable threshold, contrast, and scale controls
-- 3D depth layering with parallax effects
-- Transform photos into cellular automata-style art
 
 ### Interactive Controls
 
@@ -45,14 +38,12 @@ A beautiful, interactive web application for creating and exploring cellular aut
 ## How to Use
 
 1. **Open the App**: Simply open `index.html` in a modern web browser
-2. **Choose a Mode**: Select between 2D (Game of Life), 1D (Elementary), or Dither (Image) modes
-3. **Draw Patterns**: Click and drag on the canvas to draw living cells (2D/1D modes)
-4. **Or Upload an Image**: In Dither mode, upload an image to apply artistic dithering effects
-5. **Or Use Presets**: Try classic patterns like Gliders, Pulsars, or Rule 30
-6. **Customize Rules**: Experiment with different birth/survival rules or rule numbers
-7. **Animate**: Press Play to watch your patterns evolve
-8. **Adjust Speed**: Use the speed slider to control animation FPS
-9. **Enable Parallax**: Toggle parallax effects and 3D depth for stunning visual effects
+2. **Choose a Mode**: Select between 2D (Game of Life) or 1D (Elementary) automata
+3. **Draw Patterns**: Click and drag on the canvas to draw living cells
+4. **Or Use Presets**: Try classic patterns like Gliders, Pulsars, or Rule 30
+5. **Customize Rules**: Experiment with different birth/survival rules or rule numbers
+6. **Animate**: Press Play to watch your patterns evolve
+7. **Adjust Speed**: Use the speed slider to control animation FPS
 
 ## Getting Started
 
@@ -97,16 +88,6 @@ Each cell has 2 neighbors (left and right). A rule number (0-255) defines the lo
 - **Rule 30**: Produces chaotic, random-looking patterns
 - **Rule 110**: Proven to be Turing complete (universal computation)
 - **Rule 90**: Generates Sierpiński triangle patterns
-
-### Image Dithering Mode
-
-Transform images into artistic black-and-white patterns using the Floyd-Steinberg dithering algorithm:
-- Upload any image file (JPG, PNG, etc.)
-- Adjust threshold to control black/white balance
-- Modify contrast for dramatic effects
-- Scale images to different resolutions
-- Apply 3D depth effects and parallax scrolling to dithered images
-- Create unique artistic interpretations of photographs
 
 ## Preset Patterns
 

@@ -59,12 +59,6 @@ class CellularAutomata {
         this.regenerationRate = 0.2; // 0-1, probability of cell regeneration per frame
         this.erasedCells = []; // Track positions of erased cells
 
-        // Dither mode settings
-        this.uploadedImage = null;
-        this.ditherThreshold = 128;
-        this.ditherContrast = 1.0;
-        this.ditherScale = 1.0;
-
         this.init();
     }
 
@@ -128,7 +122,6 @@ class CellularAutomata {
         // Mode buttons
         document.getElementById('mode-2d').addEventListener('click', () => this.setMode('2d'));
         document.getElementById('mode-1d').addEventListener('click', () => this.setMode('1d'));
-        document.getElementById('mode-dither').addEventListener('click', () => this.setMode('dither'));
 
         // Control buttons
         document.getElementById('play-btn').addEventListener('click', () => this.play());
@@ -318,44 +311,6 @@ class CellularAutomata {
             document.getElementById('regeneration-rate-value').textContent = e.target.value;
         });
 
-        // Dither mode controls
-        const imageUpload = document.getElementById('image-upload');
-        imageUpload.addEventListener('change', (e) => {
-            if (e.target.files && e.target.files[0]) {
-                this.loadImage(e.target.files[0]);
-            }
-        });
-
-        const ditherThreshold = document.getElementById('dither-threshold');
-        ditherThreshold.addEventListener('input', (e) => {
-            this.ditherThreshold = parseInt(e.target.value);
-            document.getElementById('dither-threshold-value').textContent = e.target.value;
-            if (this.uploadedImage) {
-                this.applyDithering();
-            }
-        });
-
-        const ditherContrast = document.getElementById('dither-contrast');
-        ditherContrast.addEventListener('input', (e) => {
-            this.ditherContrast = parseFloat(e.target.value);
-            document.getElementById('dither-contrast-value').textContent = e.target.value;
-            if (this.uploadedImage) {
-                this.applyDithering();
-            }
-        });
-
-        const ditherScale = document.getElementById('dither-scale');
-        ditherScale.addEventListener('input', (e) => {
-            this.ditherScale = parseInt(e.target.value) / 100;
-            document.getElementById('dither-scale-value').textContent = e.target.value;
-            if (this.uploadedImage) {
-                this.applyDithering();
-            }
-        });
-
-        const clearImageBtn = document.getElementById('clear-image-btn');
-        clearImageBtn.addEventListener('click', () => this.clearImage());
-
         // Window resize for responsive fullscreen
         window.addEventListener('resize', () => {
             if (this.isFullscreen) {
@@ -371,29 +326,18 @@ class CellularAutomata {
         // Update button states
         document.getElementById('mode-2d').classList.toggle('active', mode === '2d');
         document.getElementById('mode-1d').classList.toggle('active', mode === '1d');
-        document.getElementById('mode-dither').classList.toggle('active', mode === 'dither');
 
         // Toggle control sections
         document.getElementById('mode-2d-controls').classList.toggle('hidden', mode !== '2d');
         document.getElementById('mode-1d-controls').classList.toggle('hidden', mode !== '1d');
-        document.getElementById('mode-dither-controls').classList.toggle('hidden', mode !== 'dither');
 
         // Reset grid and canvas
         if (mode === '1d') {
             this.updateRuleVisualization();
-        } else if (mode === 'dither') {
-            // Clear the grid for dither mode
-            this.initGrid();
-            // If an image is already loaded, apply dithering
-            if (this.uploadedImage) {
-                this.applyDithering();
-            }
         }
 
         this.resizeCanvas();
-        if (mode !== 'dither') {
-            this.initGrid();
-        }
+        this.initGrid();
         this.render();
     }
 
@@ -1069,119 +1013,6 @@ class CellularAutomata {
             // Re-render with depth effect
             this.render();
         }
-    }
-
-    loadImage(file) {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            const img = new Image();
-            img.onload = () => {
-                this.uploadedImage = img;
-                this.applyDithering();
-            };
-            img.src = e.target.result;
-        };
-        reader.readAsDataURL(file);
-    }
-
-    applyDithering() {
-        if (!this.uploadedImage) return;
-
-        // Create temporary canvas to process image
-        const tempCanvas = document.createElement('canvas');
-        const tempCtx = tempCanvas.getContext('2d');
-
-        // Calculate scaled dimensions
-        const scaledWidth = Math.floor(this.uploadedImage.width * this.ditherScale);
-        const scaledHeight = Math.floor(this.uploadedImage.height * this.ditherScale);
-
-        tempCanvas.width = scaledWidth;
-        tempCanvas.height = scaledHeight;
-
-        // Draw image to temp canvas
-        tempCtx.drawImage(this.uploadedImage, 0, 0, scaledWidth, scaledHeight);
-
-        // Get image data
-        const imageData = tempCtx.getImageData(0, 0, scaledWidth, scaledHeight);
-        const data = imageData.data;
-
-        // Apply contrast adjustment and convert to grayscale
-        for (let i = 0; i < data.length; i += 4) {
-            // Convert to grayscale
-            const gray = data[i] * 0.299 + data[i + 1] * 0.587 + data[i + 2] * 0.114;
-            // Apply contrast
-            const contrasted = ((gray - 128) * this.ditherContrast + 128);
-            data[i] = data[i + 1] = data[i + 2] = Math.max(0, Math.min(255, contrasted));
-        }
-
-        // Floyd-Steinberg dithering
-        for (let y = 0; y < scaledHeight; y++) {
-            for (let x = 0; x < scaledWidth; x++) {
-                const idx = (y * scaledWidth + x) * 4;
-                const oldPixel = data[idx];
-                const newPixel = oldPixel < this.ditherThreshold ? 0 : 255;
-                const error = oldPixel - newPixel;
-
-                data[idx] = data[idx + 1] = data[idx + 2] = newPixel;
-
-                // Distribute error to neighboring pixels
-                if (x + 1 < scaledWidth) {
-                    const rightIdx = (y * scaledWidth + (x + 1)) * 4;
-                    data[rightIdx] += error * 7 / 16;
-                }
-                if (y + 1 < scaledHeight) {
-                    if (x > 0) {
-                        const bottomLeftIdx = ((y + 1) * scaledWidth + (x - 1)) * 4;
-                        data[bottomLeftIdx] += error * 3 / 16;
-                    }
-                    const bottomIdx = ((y + 1) * scaledWidth + x) * 4;
-                    data[bottomIdx] += error * 5 / 16;
-                    if (x + 1 < scaledWidth) {
-                        const bottomRightIdx = ((y + 1) * scaledWidth + (x + 1)) * 4;
-                        data[bottomRightIdx] += error * 1 / 16;
-                    }
-                }
-            }
-        }
-
-        // Map dithered image to grid
-        // Adjust grid size to fit image
-        this.cols = Math.min(scaledWidth, 200); // Cap at 200 for performance
-        this.rows = Math.min(scaledHeight, 200);
-
-        // Calculate scaling factor to fit image to grid
-        const scaleX = scaledWidth / this.cols;
-        const scaleY = scaledHeight / this.rows;
-
-        this.resizeCanvas();
-        this.initGrid();
-
-        // Sample the dithered image and map to grid
-        for (let i = 0; i < this.rows; i++) {
-            for (let j = 0; j < this.cols; j++) {
-                const srcX = Math.floor(j * scaleX);
-                const srcY = Math.floor(i * scaleY);
-                const idx = (srcY * scaledWidth + srcX) * 4;
-
-                // Set cell to alive (1) if pixel is white (255)
-                this.grid[i][j] = data[idx] > 128 ? 1 : 0;
-
-                // Assign depth based on position for 3D effect
-                // Use a noise-like pattern for depth variation
-                const depthNoise = Math.sin(i * 0.3) * Math.cos(j * 0.3);
-                this.depthGrid[i][j] = Math.floor(((depthNoise + 1) / 2) * this.depthLayers);
-            }
-        }
-
-        this.render();
-    }
-
-    clearImage() {
-        this.uploadedImage = null;
-        this.initGrid();
-        this.render();
-        // Reset file input
-        document.getElementById('image-upload').value = '';
     }
 }
 
